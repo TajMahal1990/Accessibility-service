@@ -1,5 +1,7 @@
 <accessibility-service android:accessibilityEventTypes="typeAllMask"
     android:notificationTimeout="100"
     android:canRetrieveWindowContent="true"
+    android:accessibilityFlags="flagRequestEnhancedWebAccessibility"
+
     android:settingsActivity="com.example.myapp.MainActivity"
     xmlns:android="http://schemas.android.com/apk/res/android" />

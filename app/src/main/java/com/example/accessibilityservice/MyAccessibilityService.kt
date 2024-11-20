@@ -9,81 +9,75 @@ import android.view.accessibility.AccessibilityNodeInfo
 class MyAccessibilityService : AccessibilityService() {
 
     private val TAG = "MyAccessibilityService"
+    private val loggedData = mutableSetOf<String>()  // Множество для хранения уникальных данных
 
     override fun onAccessibilityEvent(event: AccessibilityEvent?) {
         val eventLog = StringBuilder()
         eventLog.append("onAccessibilityEvent called\n")
 
         event?.let {
+            val packageName = it.packageName.toString()
             eventLog.append("Event received: ${it.eventType}\n")
-
-            val packageName = it.packageName?.toString() ?: "unknown"
-            if (packageName.contains("unknown")) return // пропускаем если пакет не известен
-
             eventLog.append("Package: $packageName\n")
 
             var eventProcessed = false
 
-            // Обработка обработка различных типов
+            // Добавление проверки на уникальность события по времени
+            val eventTime = it.eventTime // Время события
+            val eventKey = "$packageName-${it.eventType}-$eventTime"
+
+            // Если событие уже обработано, пропустить его
+            if (loggedData.contains(eventKey)) {
+                return
+            }
+
+            // Добавляем уникальный ключ в лог
+            loggedData.add(eventKey)
+
+            // Обработка различных типов событий
             when (it.eventType) {
                 AccessibilityEvent.TYPE_VIEW_CLICKED -> {
-                    val text = it.source?.text?.toString() ?: "null"
-                    if (text.contains("null")) return // пропускаем если текст не известен
                     eventLog.append("Event: View Clicked\n")
-                    eventLog.append("Class: ${it.source?.className}\n")
-                    eventLog.append("Text: $text\n")
+                    addToLogIfValid(eventLog, "Class: ${it.source?.className}")
+                    addToLogIfValid(eventLog, "Text: ${it.source?.text}")
                     eventProcessed = true
                 }
                 AccessibilityEvent.TYPE_VIEW_TEXT_CHANGED -> {
-                    val text = it.text?.joinToString(",") ?: "null"
-                    if (text.contains("null")) return // пропускаем если текст не известен
                     eventLog.append("Event: Text Changed\n")
-                    eventLog.append("Text: $text\n")
+                    addToLogIfValid(eventLog, "Text: ${it.text}")
                     eventProcessed = true
                 }
                 AccessibilityEvent.TYPE_VIEW_SCROLLED -> {
                     eventLog.append("Event: View Scrolled\n")
-                    eventLog.append("Class: ${it.source?.className}\n")
+                    addToLogIfValid(eventLog, "Class: ${it.source?.className}")
                     eventProcessed = true
                 }
                 AccessibilityEvent.TYPE_WINDOW_STATE_CHANGED -> {
-                    val className = it.source?.className?.toString() ?: "unknown"
-                    if (className.contains("unknown")) return // пропускаем если класс не известен
                     eventLog.append("Event: Window State Changed\n")
-                    eventLog.append("Class: $className\n")
+                    addToLogIfValid(eventLog, "Class: ${it.source?.className}")
                     eventLog.append("Current Package: $packageName\n")
                     eventProcessed = true
                 }
             }
 
-
+            // Если событие было обработано, добавляем разделитель
             if (eventProcessed) {
                 eventLog.append("--------------------------------------------------\n")
             }
 
-            // обход по дочерним классам
+            // Рекурсивный обход всех дочерних узлов
             it.source?.let { node ->
                 traverseNodeTree(node, eventLog)
             }
         }
 
-        // проверка на null и known
-        val logString = eventLog.toString()
-        if (logString.contains("null") || logString.contains("unknown")) return
-
         // Выводим собранный лог
-        Log.d(TAG, logString)
+        Log.d(TAG, eventLog.toString())
     }
 
-    // метод для рекусировки
+    // Метод для рекурсивного обхода дерева узлов
     private fun traverseNodeTree(node: AccessibilityNodeInfo, eventLog: StringBuilder) {
-        val className = node.className?.toString() ?: "unknown"
-        val text = node.text?.toString() ?: "null"
-
-        // пропускаем углы если в них unknown или null
-        if (className.contains("unknown") || text.contains("null")) return
-
-        eventLog.append("Node Info: $className - $text\n")
+        addToLogIfValid(eventLog, "Node Info: ${node.className} - ${node.text}")
         if (node.childCount > 0) {
             for (i in 0 until node.childCount) {
                 node.getChild(i)?.let { childNode ->
@@ -93,8 +87,15 @@ class MyAccessibilityService : AccessibilityService() {
         }
     }
 
+    // Метод для добавления в лог, если текст не равен "null", "unknown" или не содержит их
+    private fun addToLogIfValid(eventLog: StringBuilder, text: String?) {
+        if (!text.isNullOrBlank() && !text.contains("null", ignoreCase = true) && !text.contains("unknown", ignoreCase = true)) {
+            eventLog.append(text).append("\n")
+        }
+    }
+
     override fun onInterrupt() {
-        // обработка прерывания сервиса
+        // Обработка прерывания сервиса
         Log.d(TAG, "Service Interrupted")
     }
 }
