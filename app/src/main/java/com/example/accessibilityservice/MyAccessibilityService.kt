@@ -1,10 +1,11 @@
 package com.example.accessibilityservice
 
-
 import android.accessibilityservice.AccessibilityService
 import android.util.Log
 import android.view.accessibility.AccessibilityEvent
 import android.view.accessibility.AccessibilityNodeInfo
+
+
 
 class MyAccessibilityService : AccessibilityService() {
 
@@ -57,6 +58,15 @@ class MyAccessibilityService : AccessibilityService() {
                     addToLogIfValid(eventLog, "Class: ${it.source?.className}")
                     eventLog.append("Current Package: $packageName\n")
                     eventProcessed = true
+                }
+                AccessibilityEvent.TYPE_NOTIFICATION_STATE_CHANGED -> {
+                    eventLog.append("Пришло уведомление от: $packageName\n")
+
+                    // Получаем текст уведомления, если он есть
+                    val notificationText = event?.text?.joinToString(" ") ?: "Нет текста уведомления"
+                    addToLogIfValid(eventLog, "Текст: $notificationText")
+
+                    eventLog.append("--------------------------------------------------\n")
                 }
             }
 
